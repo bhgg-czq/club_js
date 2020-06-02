@@ -1,0 +1,12 @@
+[
+    {
+        "id":"123",
+        "password":"123",
+        "type":"class"
+    },
+    {
+        "id":"456",
+        "password":"456",
+        "type":"activity"
+    }
+]
