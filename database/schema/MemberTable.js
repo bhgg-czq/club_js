@@ -4,7 +4,7 @@ let ObjectId =Schema.Types.ObjectId
 
 const MemberTableScheme=new Schema({
     id:{type:ObjectId},
-    clubid:{type:Number},
+    clubid:{type:String},
     stuid:{type:String},
     type:{type:String},
     joinDate:{type:Date},

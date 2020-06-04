@@ -42,6 +42,7 @@ router.post('/login',async(ctx)=>{
 
 })
 
+//查找活动
 router.get('/waittopassa',async(ctx)=>{
     let aid=ctx.query.aid
     let pass
@@ -149,4 +150,6 @@ router.post('/cancelactivity',async(ctx)=>{
         ctx.body={code:500,message:err}
     })
 })
+
+
 module.exports =router
