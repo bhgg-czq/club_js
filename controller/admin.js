@@ -42,57 +42,22 @@ router.post('/login',async(ctx)=>{
 
 })
 
-//查找活动
+activitiesDetail=function(pass){
+   
+}
+
+//查找未审核的活动
 router.get('/waittopassa',async(ctx)=>{
     let aid=ctx.query.aid
-    let pass
-    if(ctx.query.index==="0")
-        pass=false
-    else 
-        pass=true
-    console.log(ctx.query.index+pass)
+    // console.log(ctx.query.index+pass)
     console.log(ctx.query)
     console.log(aid)
-    const club=mongoose.model('Club')
     const activity=mongoose.model('Activity')
-    // let clubs=new club()
-    // clubs.name='校学生会',
-    // clubs.cId="A111"
-    // clubs.logo='',
-    // clubs.description='无',
-    // clubs.bookNum=39,
-    // clubs.level=2,
-    // clubs.mainActivity="无",
-    // clubs.college="校级",
-    // clubs.adminId="J789"
-    // clubs.save();
-//     let a=new activity()
-//     a.name="校学生会招新活动"
-//     a.cId="A111"
-//     a.apply_date="2020-3-10"
-//     a.start_time="2020-7-1"
-//     a.end_time="2020-7-10"
-//     a.number=100
-//     a.budget=500
-//     a.detail="这是一个活动，将在这天举行什么fdsfdsfdsf巴拉巴拉"
-//     a.image=""
-//     a.limited="1"
-//     a.a_pass=false
-//     a.b_pass=false
-//      a.save()
-   let activities=new Array();
-   let cid
-    await club.find({adminId:aid}).exec().then(async(res)=>{
-        console.log(res)
-        
-        for(let a=0;a<res.length;a++){
-            cid=res[a].cId
-            console.log(cid)
-            await activity.aggregate([
+    let result=[]
+             await activity.aggregate([
                 {
                     $match:{
-                            "a_pass":pass,
-                            "cId":cid
+                            "a_pass":null
                             }
                },
                 {
@@ -103,33 +68,53 @@ router.get('/waittopassa',async(ctx)=>{
                         as:"items"
                     }
                 },
-                // {
-                //     $project:{stuid:1,joinDate:1}
-                // },
-            ],
-              ).then(async(result)=>{
-                  console.log(result+"result")
-                  if(result){
-                    if(a===0){
-                        activities=result
+                {
+                    $match:{
+                        "clubs.adminId":aid
                     }
-                    else{
-                        for(let i in result){
-
-                            　　activities.push(result[i])
-                            
-                            }
-                        
-                    }
-                  }
-                    
-              }).catch(err=>{
-                  ctx.body={code:500,message:err}
-              })
-        }
-        ctx.body={activities:activities}
+                }
+            ]).then(async(res)=>{
+    
+        ctx.body={code:200,activities:res}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
     })
 })
+
+//查找已审核的活动
+router.get('/alreadypassa',async(ctx)=>{
+    let aid=ctx.query.aid
+    console.log(ctx.query)
+    console.log(aid)
+    const activity=mongoose.model('Activity')
+    let result=[]
+             await activity.aggregate([
+                {
+                    $match:{
+                            "a_pass":{"$ne":null }
+                            }
+               },
+                {
+                    $lookup:{
+                        from:"clubs",
+                        localField:"cId",
+                        foreignField:"cId",
+                        as:"items"
+                    }
+                },
+                {
+                    $match:{
+                        "clubs.adminId":aid
+                    }
+                }
+            ]).then(res=>{
+    
+        ctx.body={code:200,activities:res}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+})
+
 
 router.post('/passactivity',async(ctx)=>{
     let content=ctx.request.body
@@ -149,6 +134,139 @@ router.post('/cancelactivity',async(ctx)=>{
     }).catch(err=>{
         ctx.body={code:500,message:err}
     })
+})
+
+//查找未审核的地点
+router.get('/waittopassb',async(ctx)=>{
+    let aid=ctx.query.aid
+    console.log(ctx.query)
+    console.log(aid)
+    const timetable=mongoose.model('Timetable')
+    const club=mongoose.model('Club')
+             await timetable.aggregate([
+                {
+                    $match:{
+                            "state":null
+                            }
+               },
+                {
+                    $lookup:{
+                        from:"activities",
+                        localField:"aId",
+                        foreignField:"_id",
+                        as:"activity"
+                    }
+                },
+                {
+                    $lookup:{
+                        from:"classrooms",
+                        localField:"rId",
+                        foreignField:"roomid",
+                        as:"classroom"
+                    }
+                },
+                { 
+                    $match : {
+                        "classroom.adminId" :aid
+                    } 
+                }
+            ]).then(async(res)=>{
+                for(let i=0;i<res.length;i++){
+                    await club.findOne({cId:res[i].activity[0].cId}).exec().then(async(result)=>{
+                        if(result){
+                            res[i].college=result.college
+                            res[i].clubname=result.name
+                        }
+                      
+                    })
+                }
+        ctx.body={code:200,activities:res}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+})
+
+//查找已经审核的地点
+router.get('/alreadypassb',async(ctx)=>{
+    let aid=ctx.query.aid
+    console.log(ctx.query)
+    console.log(aid)
+    const timetable=mongoose.model('Timetable')
+    const club=mongoose.model('Club')
+             await timetable.aggregate([
+                {
+                    $match:{
+                            "state":{"$ne":null}
+                            }
+               },
+                {
+                    $lookup:{
+                        from:"activities",
+                        localField:"aId",
+                        foreignField:"_id",
+                        as:"activity"
+                    }
+                },
+                {
+                    $lookup:{
+                        from:"classrooms",
+                        localField:"rId",
+                        foreignField:"roomid",
+                        as:"classroom"
+                    }
+                },
+                { 
+                    $match : {
+                        "classroom.adminId" :aid
+                    } 
+                }
+            ]).then(async(res)=>{
+                for(let i=0;i<res.length;i++){
+                    await club.findOne({cId:res[i].activity[0].cId}).exec().then(async(result)=>{
+                        if(result){
+                            res[i].college=result.college
+                            res[i].clubname=result.name
+                        }
+                      
+                    })
+                }
+        ctx.body={code:200,activities:res}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+})
+
+//审核通过场地
+ router.get('/classroom/pass',async(ctx)=>{
+    let tid=ctx.query.tid
+    let aid=ctx.query.aid
+    const timetable=mongoose.model('Timetable')
+    const activity=mongoose.model('Activity')
+    await timetable.updateOne({_id:tid},{state:1}).exec().then(async(res)=>{
+        await activity.updateOne({_id:aid},{b_pass:1}).exec().then(async(result)=>{
+            ctx.body={code:200,message:"审核通过"}
+        }).catch(err=>{
+            ctx.body={code:500,message:err}
+        })
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+
+    
+})
+
+//审核不通过场地
+router.get('/classroom/unpass',async(ctx)=>{
+    let tid=ctx.query.tid
+    let reason=ctx.query.reason
+    const timetable=mongoose.model('Timetable')
+    await timetable.updateOne({_id:tid},{state:0,reason:reason}).exec().then(async(res)=>{
+        ctx.body={code:200,message:"审核不通过"}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+
+    
 })
 
 

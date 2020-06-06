@@ -4,7 +4,7 @@ let ObjectId =Schema.Types.ObjectId
 
 const TimetableSchema=new Schema({
     id:{type:ObjectId},
-    aId:{type:String},
+    aId:{type:ObjectId},
     rId:{type:String},
     startTime:{type:Date},
     endTime:{type:Date},

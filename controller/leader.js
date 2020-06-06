@@ -77,6 +77,46 @@ router.post('/findAll',async(ctx)=>{
       })
 })
 
+router.post('/member/search',async(ctx)=>{
+    let content=ctx.request.body
+    let keyname=new RegExp(content.name)
+    let keycollege=new RegExp(content.college)
+    const mTable=mongoose.model('MemberTable')
+    console.log(content)
+   await mTable.aggregate([
+        {
+            $lookup:{
+                from:"students",
+                localField:"stuid",
+                foreignField:"stuid",
+                as:"items"
+            }
+        },
+        // {
+        //     $project:{stuid:1,joinDate:1}
+        // },
+        {
+            $match:{
+                    "clubid":content.cid,
+                    "state":Number(content.state),
+                    "type":"member"
+                    }
+        }
+    ],
+      ).then(async(result)=>{
+          let re=[]
+        for(let i=0;i<result.length;i++){
+            console.log(i)
+            let str=result[i].items[0].stuname
+            let str2=result[i].items[0].collegename
+            if(keyname.test(str)&&keycollege.test(str2))
+                re.push(result[i])
+        }
+       console.log(re)
+       ctx.body=re
+      })
+})
+
 router.post('/addMember',async(ctx)=>{
     let content=ctx.request.body
     const mTable=mongoose.model('MemberTable')
@@ -117,7 +157,13 @@ router.post('/addMember',async(ctx)=>{
 
 })
 router.post('/updateMember',async(ctx)=>{
-
+    let content=ctx.request.body
+    const student =mongoose.model('Student')
+    await student.update({"stuid":stuid},{$set:{"phone":content.phone}}).then(res=>{
+        ctx.body={code:200,message:"修改成功"}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
 })
 
 router.post('/deleteMember',async(ctx)=>{
@@ -168,7 +214,7 @@ router.post('/addPassage',async(ctx)=>{
         ctx.body={code:500,message:err}
     })
 })
-
+//删除推送
 router.get('/deletePassage',async(ctx)=>{
     let pid=ctx.query.pid
     console.log(ctx.query)
@@ -180,7 +226,7 @@ router.get('/deletePassage',async(ctx)=>{
         ctx.body={code:500,message:err}
     })
 })
-
+//搜索推送
 router.get('/searchPassage',async(ctx)=>{
     let cid=ctx.query.cid
     let keyword=ctx.query.keyStr
@@ -336,21 +382,23 @@ router.get('/classroom/getPass',async(ctx)=>{
 
 router.post('/activity/checkroom',async(ctx)=>{
     let content=ctx.request.body
+    console.log("fdsfsdfsdf")
     console.log(content)
     const timetable=mongoose.model('Timetable')
     let table=new timetable()
-    table.aId=content.aId
-    table.rId=content.rId
-    table.startTime=content.startTime
-    table.endTime=content.endTime
-    table.state=content.state,
-    table.reason=content.reason
+    table.aId=content.aid
+    table.rId=content.rid
+    table.startTime=content.start
+    table.endTime=content.end
+    table.state="",
+    table.reason=""
     await table.save().then(async()=>{
         ctx.body={code:200,message:"提交申请成功"}
     }).catch(err=>{
         ctx.body={code:500,message:err}
     })
 })
+
 
 //添加活动
 
@@ -381,6 +429,7 @@ router.post('/activity/add',async(ctx)=>{
 //获得未审核的活动列表
 router.get('/activity/waitPass',async(ctx)=>{
     let cid=ctx.query.cid
+    let key=new RegExp(ctx.query.name)
     const activity=mongoose.model('Activity')
     await activity.aggregate([
         {
@@ -392,14 +441,6 @@ router.get('/activity/waitPass',async(ctx)=>{
                     ]
                     }
        },
-        // {
-        //     $lookup:{
-        //         from:"clubs",
-        //         localField:"cId",
-        //         foreignField:"cId",
-        //         as:"items"
-        //     }
-        // },
     ],
       ).then(async(result)=>{
           console.log(result+"result")
@@ -409,6 +450,40 @@ router.get('/activity/waitPass',async(ctx)=>{
           ctx.body={code:500,message:err}
       })
 })
+//搜索未审核活动列表
+router.get('/activity/searchwaitPass',async(ctx)=>{
+    let cid=ctx.query.cid
+    let key=new RegExp(ctx.query.name)
+    console.log(key)
+    const activity=mongoose.model('Activity')
+    let re=[]
+    await activity.aggregate([
+        {
+            $match:{
+                    "cId":cid,
+                    $or:[
+                        {"a_pass":null},
+                        {"b_pass":null}
+                    ]
+                    }
+       },
+    ],
+      ).then(async(result)=>{
+        console.log(result+"result")
+          for(let i=0;i<result.length;i++){
+            console.log(i)
+            let str=result[i].name
+            console.log(result[i].name)
+            if(key.test(str))
+                re.push(result[i])
+        }    
+        ctx.body={code:200,activities:re}
+            
+      }).catch(err=>{
+          ctx.body={code:500,message:err}
+      })
+})
+
 
 router.get('/activity/pass',async(ctx)=>{
     let cid=ctx.query.cid
