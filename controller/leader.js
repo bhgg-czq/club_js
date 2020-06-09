@@ -2,6 +2,7 @@ const Router = require('koa-router')
 const mongoose = require('mongoose')
 
 let router = new Router()
+const ObjectId = mongoose.Types.ObjectId
 router.get('/',async(ctx)=>{
     ctx.body="这是社长操作"
 })
@@ -131,7 +132,7 @@ router.post('/addMember',async(ctx)=>{
          await mTable.findOne({stuid:stuid,clubid:cid}).exec().then(async(result)=>{
             if(result){
                 ctx.body={code:400,message:"该学生已加入社团"}
-                
+
             }else{
                 console.log(res)
                 let newmember=new mTable()
@@ -159,7 +160,7 @@ router.post('/addMember',async(ctx)=>{
 router.post('/updateMember',async(ctx)=>{
     let content=ctx.request.body
     const student =mongoose.model('Student')
-    await student.update({"stuid":stuid},{$set:{"phone":content.phone}}).then(res=>{
+    await student.update({"stuid":content.id},{$set:{"phone":content.phone}}).then(res=>{
         ctx.body={code:200,message:"修改成功"}
     }).catch(err=>{
         ctx.body={code:500,message:err}
@@ -253,50 +254,40 @@ router.get('/searchPassage',async(ctx)=>{
     })
 })
 
+//取消活动申请
+router.get('/activity/cancel',async(ctx)=>{
+    let aid=ctx.query.id;
+    console.log(aid)
+    const activity=mongoose.model('Activity')
+    await activity.update({"_id":aid},{$set:{"b_pass":false,"a_pass":false}}).then(async(res)=>{
+        ctx.body={code:200,message:"取消申请成功"}
+    }).catch(err=>{
+        ctx.body={code:500,message:err}
+    })
+})
+
 //场地-----------------------------------------------------------------------------------------------
 
 router.get('/listAllRoom',async(ctx)=>{
     const classroom=mongoose.model('Classroom')
-    // let c=new classroom()
-    // c.roomid="1"
-    // c.name="风雨操场"
-    // c.ohp=false
-    // c.capacity=false
-    // c.adminId="c123"
-    // c.save()
 
-    // let d=new classroom()
-    // d.roomid="2"
-    // d.name="图信"
-    // d.ohp=true
-    // d.capacity=true
-    // d.adminId="c456"
-    // d.save()
     await classroom.find().exec().then(async(res)=>{
         ctx.body={code:200,roomlist:res}
     }).catch(err=>{
         ctx.body={code:500,message:err}
     })
-    
+
 })
 
 router.get('/classroom/getunPass',async(ctx)=>{
     let aid=ctx.query.aid
     console.log(aid)
     const timetable=mongoose.model('Timetable')
-    // let c=new timetable()
-    // c.aId="5ed490850a2e722678055b10"
-    // c.rId="1"
-    // c.startTime="2020-06-30 13:00"
-    // c.endTime="2020-06-30 17:00"
-    // c.state=""
-    // c.reason=""
-    // c.save()
 
     await timetable.aggregate([
         {
             $match:{
-                   "aId":aid,
+                   "aId":new ObjectId(aid),
                    "state":0
                     }
        },
@@ -326,7 +317,7 @@ router.get('/classroom/waitPass',async(ctx)=>{
     await timetable.aggregate([
         {
             $match:{
-                   "aId":aid,
+                   "aId":new ObjectId(aid),
                    "state":null
                     }
        },
@@ -437,19 +428,25 @@ router.get('/activity/waitPass',async(ctx)=>{
                     "cId":cid,
                     $or:[
                         {"a_pass":null},
-                        {"b_pass":null}
+                        {
+                            $and:[
+                                {"a_pass":true},
+                                {"b_pass":null}
+                            ]
+                        }
                     ]
-                    }
+            }
        },
     ],
       ).then(async(result)=>{
           console.log(result+"result")
           ctx.body={code:200,activities:result}
-            
+
       }).catch(err=>{
           ctx.body={code:500,message:err}
       })
 })
+
 //搜索未审核活动列表
 router.get('/activity/searchwaitPass',async(ctx)=>{
     let cid=ctx.query.cid
@@ -476,9 +473,9 @@ router.get('/activity/searchwaitPass',async(ctx)=>{
             console.log(result[i].name)
             if(key.test(str))
                 re.push(result[i])
-        }    
+        }
         ctx.body={code:200,activities:re}
-            
+
       }).catch(err=>{
           ctx.body={code:500,message:err}
       })
@@ -492,10 +489,16 @@ router.get('/activity/pass',async(ctx)=>{
         {
             $match:{
                     "cId":cid,
-                    "a_pass":true,
-                    "b_pass":true
-                    
-                    }
+                    $or:[
+                        {"a_pass":false},
+                        {
+                            $and:[
+                                {"a_pass":true},
+                                {"b_pass":true},
+                            ]
+                        }
+                    ]
+            }
        },
         // {
         //     $lookup:{
@@ -517,7 +520,7 @@ router.get('/activity/pass',async(ctx)=>{
         //   }
           console.log(result+"result")
           ctx.body={code:200,activities:result}
-            
+
       }).catch(err=>{
           ctx.body={code:500,message:err}
       })

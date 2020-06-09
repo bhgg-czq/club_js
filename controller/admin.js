@@ -13,7 +13,7 @@ router.post('/login',async(ctx)=>{
     let userid = loginUser.userid
     let password = loginUser.password
 
-    
+
     //引入User的model
     const Admin = mongoose.model('Admin')
 
@@ -24,7 +24,7 @@ router.post('/login',async(ctx)=>{
             if(password==result.password)
             // await newAdmin.comparePassword(password,result.password)
             // .then(isMatch=>{
-                ctx.body={code:200,message:"登陆成功"}
+                ctx.body={code:200,message:result.type}
           //  })
             // .catch(error=>{
                 else{
@@ -43,17 +43,15 @@ router.post('/login',async(ctx)=>{
 })
 
 activitiesDetail=function(pass){
-   
+
 }
 
 //查找未审核的活动
 router.get('/waittopassa',async(ctx)=>{
     let aid=ctx.query.aid
     // console.log(ctx.query.index+pass)
-    console.log(ctx.query)
     console.log(aid)
     const activity=mongoose.model('Activity')
-    let result=[]
              await activity.aggregate([
                 {
                     $match:{
@@ -70,12 +68,14 @@ router.get('/waittopassa',async(ctx)=>{
                 },
                 {
                     $match:{
-                        "clubs.adminId":aid
+                        "items.adminId":aid
                     }
                 }
             ]).then(async(res)=>{
-    
+
+                console.log(res)
         ctx.body={code:200,activities:res}
+
     }).catch(err=>{
         ctx.body={code:500,message:err}
     })
@@ -104,11 +104,11 @@ router.get('/alreadypassa',async(ctx)=>{
                 },
                 {
                     $match:{
-                        "clubs.adminId":aid
+                        "items.adminId":aid
                     }
                 }
             ]).then(res=>{
-    
+
         ctx.body={code:200,activities:res}
     }).catch(err=>{
         ctx.body={code:500,message:err}
@@ -116,20 +116,20 @@ router.get('/alreadypassa',async(ctx)=>{
 })
 
 
-router.post('/passactivity',async(ctx)=>{
-    let content=ctx.request.body
+router.get('/passactivity',async(ctx)=>{
+    let aid=ctx.query.aid
     const activity=mongoose.model('Activity')
-    await activity.updateOne({_id:content.activity_id},{a_pass:1}).exec().then(async(res)=>{
+    await activity.updateOne({"_id":aid},{$set:{"a_pass":true}}).exec().then(async(res)=>{
         ctx.body={code:200,message:"审核通过成功"}
     }).catch(err=>{
         ctx.body={code:500,message:err}
     })
 })
 
-router.post('/cancelactivity',async(ctx)=>{
-    let content=ctx.request.body
+router.get('/cancelactivity',async(ctx)=>{
+    let aid=ctx.query.aid
     const activity=mongoose.model('Activity')
-    await activity.updateOne({_id:content.activity_id},{a_pass:0}).exec().then(async(res)=>{
+    await activity.updateOne({"_id":aid},{$set:{"a_pass":false}}).exec().then(async(res)=>{
         ctx.body={code:200,message:"审核不通过"}
     }).catch(err=>{
         ctx.body={code:500,message:err}
@@ -165,10 +165,10 @@ router.get('/waittopassb',async(ctx)=>{
                         as:"classroom"
                     }
                 },
-                { 
+                {
                     $match : {
                         "classroom.adminId" :aid
-                    } 
+                    }
                 }
             ]).then(async(res)=>{
                 for(let i=0;i<res.length;i++){
@@ -177,7 +177,7 @@ router.get('/waittopassb',async(ctx)=>{
                             res[i].college=result.college
                             res[i].clubname=result.name
                         }
-                      
+
                     })
                 }
         ctx.body={code:200,activities:res}
@@ -215,10 +215,10 @@ router.get('/alreadypassb',async(ctx)=>{
                         as:"classroom"
                     }
                 },
-                { 
+                {
                     $match : {
                         "classroom.adminId" :aid
-                    } 
+                    }
                 }
             ]).then(async(res)=>{
                 for(let i=0;i<res.length;i++){
@@ -227,7 +227,7 @@ router.get('/alreadypassb',async(ctx)=>{
                             res[i].college=result.college
                             res[i].clubname=result.name
                         }
-                      
+
                     })
                 }
         ctx.body={code:200,activities:res}
@@ -243,7 +243,7 @@ router.get('/alreadypassb',async(ctx)=>{
     const timetable=mongoose.model('Timetable')
     const activity=mongoose.model('Activity')
     await timetable.updateOne({_id:tid},{state:1}).exec().then(async(res)=>{
-        await activity.updateOne({_id:aid},{b_pass:1}).exec().then(async(result)=>{
+        await activity.updateOne({_id:aid},{b_pass:true}).exec().then(async(result)=>{
             ctx.body={code:200,message:"审核通过"}
         }).catch(err=>{
             ctx.body={code:500,message:err}
@@ -252,7 +252,7 @@ router.get('/alreadypassb',async(ctx)=>{
         ctx.body={code:500,message:err}
     })
 
-    
+
 })
 
 //审核不通过场地
@@ -266,7 +266,7 @@ router.get('/classroom/unpass',async(ctx)=>{
         ctx.body={code:500,message:err}
     })
 
-    
+
 })
 
 

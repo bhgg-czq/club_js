@@ -4,7 +4,7 @@ let ObjectId =Schema.Types.ObjectId
 
 const PassageSchema =new Schema({
     id:{type:ObjectId},
-    cid:{type:Number},
+    cid:{type:String},
     name:{type:String},
     content:{type:String},
     image:{type:String},
